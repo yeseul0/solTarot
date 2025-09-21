@@ -1,15 +1,24 @@
 import React, { useState } from "react";
-import Welcome from "./Welcome";
-import PickCard from "./PickCard";
+import Welcome from "./pages/Welcome";
+import PickCard from "./pages/PickCard";
+
+declare global {
+  interface Window {
+    solana?: {
+      isPhantom?: boolean;
+      connect: () => Promise<{ publicKey: { toString: () => string } }>;
+    };
+  }
+}
 
 const App: React.FC = () => {
   const [step, setStep] = useState<"welcome" | "pick">("welcome");
   const [wallet, setWallet] = useState<string | null>(null);
 
   const connectWallet = async () => {
-    if ((window as any).solana && (window as any).solana.isPhantom) {
+    if (window.solana && window.solana.isPhantom) {
       try {
-        const resp = await (window as any).solana.connect();
+        const resp = await window.solana.connect();
         setWallet(resp.publicKey.toString());
         setStep("pick");
       } catch (err) {
