@@ -4,3 +4,12 @@ target/
 .env
 .DS_Store
 dist/
+
+# Rust
+Cargo.lock
+*.pdb
+
+# Anchor
+.anchor/
+test-ledger/
+.solana/
