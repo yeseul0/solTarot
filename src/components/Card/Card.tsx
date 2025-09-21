@@ -62,38 +62,57 @@ const TarotCard: React.FC<TarotCardProps> = ({
   // 카드 앞면 (실제 카드)
   const frontStyle: React.CSSProperties = {
     ...faceStyle,
-    backgroundImage: cardImage ? `url(${cardImage})` : `url(${coverImg})`,
     transform: "rotateY(180deg)",
+    backgroundColor: "#1a1a1a",
     display: "flex",
-    alignItems: "flex-end",
+    alignItems: "center",
     justifyContent: "center",
-    padding: "10px",
+  };
+
+  // 카드 이미지 스타일
+  const imageStyle: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    borderRadius: 8,
   };
 
   return (
-    <div
-      onClick={onPick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-      style={containerStyle}
-    >
-      <div style={wrapperStyle}>
-        <div style={backStyle} />
-        <div style={frontStyle}>
-          {isFlipped && cardName && (
-            <div style={{
-              background: "rgba(0,0,0,0.7)",
-              color: "#fff",
-              padding: "5px 10px",
-              borderRadius: 5,
-              fontSize: 12,
-              fontWeight: "bold",
-            }}>
-              {cardName}
-            </div>
-          )}
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+      <div
+        onClick={onPick}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+        style={containerStyle}
+      >
+        <div style={wrapperStyle}>
+          <div style={backStyle} />
+          <div style={frontStyle}>
+            {cardImage && (
+              <img
+                src={cardImage}
+                alt={cardName || "Tarot Card"}
+                style={imageStyle}
+              />
+            )}
+          </div>
         </div>
       </div>
+      {isFlipped && cardName && (
+        <div style={{
+          background: "rgba(139, 69, 19, 0.9)",
+          color: "#fff",
+          padding: "8px 16px",
+          borderRadius: 8,
+          fontSize: 16,
+          fontWeight: "bold",
+          textAlign: "center",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+          minWidth: "120px",
+        }}>
+          {cardName}
+        </div>
+      )}
     </div>
   );
 };

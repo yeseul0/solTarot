@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Welcome from "./pages/Welcome";
 import PickCard from "./pages/PickCard";
 
@@ -12,7 +13,6 @@ declare global {
 }
 
 const App: React.FC = () => {
-  const [step, setStep] = useState<"welcome" | "pick">("welcome");
   const [wallet, setWallet] = useState<string | null>(null);
 
   const connectWallet = async () => {
@@ -20,7 +20,6 @@ const App: React.FC = () => {
       try {
         const resp = await window.solana.connect();
         setWallet(resp.publicKey.toString());
-        setStep("pick");
       } catch (err) {
         alert("지갑 연결이 취소되었습니다.");
       }
@@ -29,16 +28,13 @@ const App: React.FC = () => {
     }
   };
 
-  const reset = () => {
-    setStep("welcome");
-    setWallet(null);
-  };
-
   return (
-    <>
-      {step === "welcome" && <Welcome onConnect={connectWallet} />}
-      {step === "pick" && wallet && <PickCard wallet={wallet} onReset={reset} />}
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Welcome onConnect={connectWallet} />} />
+        <Route path="/pick" element={<PickCard />} />
+      </Routes>
+    </BrowserRouter>
   );
 };
 
