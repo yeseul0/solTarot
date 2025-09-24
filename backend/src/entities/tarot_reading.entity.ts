@@ -13,8 +13,8 @@ export class TarotReading {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 42 })
-  walletAddress: string; // FK
+  @Column({ length: 44 })
+  walletAddress: string; // FK (Solana 주소는 44자)
 
   @Column({ length: 50 })
   spreadType: string; // 'three-card', 'celtic-cross', 'single-card'

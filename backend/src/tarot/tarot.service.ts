@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
-import { TarotReading } from '../entities/tarot_reading.entity';
+import { TarotReading, DrawnCard } from '../entities/tarot_reading.entity';
 import { AIInterpretationService } from '../ai/ai.service';
 
 @Injectable()
@@ -31,8 +31,14 @@ export class TarotService {
   }
 
   // 🤖 AI 해석과 이미지 생성
-  async generateAIInterpretation(drawnCards: any[], spreadType: string): Promise<string> {
-    return this.aiInterpretationService.generateInterpretation(drawnCards, spreadType);
+  async generateAIInterpretation(
+    drawnCards: DrawnCard[],
+    spreadKey: string,
+  ): Promise<string> {
+    return this.aiInterpretationService.generateInterpretation(
+      drawnCards,
+      spreadKey,
+    );
   }
 
   // 💾 타로 리딩 저장

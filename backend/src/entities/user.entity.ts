@@ -3,8 +3,8 @@ import { TarotReading } from './tarot_reading.entity';
 
 @Entity('users')
 export class User {
-  @PrimaryColumn({ length: 42 })
-  walletAddress: string; // PK로 사용
+  @PrimaryColumn({ length: 44 })
+  walletAddress: string; // PK로 사용 (Solana 주소는 44자)
 
   @CreateDateColumn()
   createdAt: Date;

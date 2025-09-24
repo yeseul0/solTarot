@@ -8,6 +8,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { User } from './entities/user.entity';
 import { TarotReading } from './entities/tarot_reading.entity';
 import { AIModule } from './ai/ai.module';
+import { TarotModule } from './tarot/tarot.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { AIModule } from './ai/ai.module';
       inject: [ConfigService],
     }),
     AIModule,
+    TarotModule,
   ],
   controllers: [AppController],
   providers: [AppService],

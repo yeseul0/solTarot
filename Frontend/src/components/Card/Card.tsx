@@ -9,6 +9,7 @@ interface TarotCardProps {
   picked: boolean;
   hovered: boolean;
   isFlipped?: boolean;
+  isReversed?: boolean;  // 역방향 카드인지 여부
   onPick?: () => void;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
@@ -21,6 +22,7 @@ const TarotCard: React.FC<TarotCardProps> = ({
   picked,
   hovered,
   isFlipped = false,
+  isReversed = false,
   onPick,
   onMouseEnter,
   onMouseLeave,
@@ -69,12 +71,14 @@ const TarotCard: React.FC<TarotCardProps> = ({
     justifyContent: "center",
   };
 
-  // 카드 이미지 스타일
+  // 카드 이미지 스타일 (역방향일 때 180도 회전)
   const imageStyle: React.CSSProperties = {
     width: "100%",
     height: "100%",
     objectFit: "contain",
     borderRadius: 8,
+    transform: isReversed ? "rotate(180deg)" : "rotate(0deg)",
+    transition: "transform 0.3s ease",
   };
 
   return (
@@ -91,7 +95,7 @@ const TarotCard: React.FC<TarotCardProps> = ({
             {cardImage && (
               <img
                 src={cardImage}
-                alt={cardName || "Tarot Card"}
+                alt={`${cardName || "Tarot Card"}${isReversed ? " (역방향)" : ""}`}
                 style={imageStyle}
               />
             )}
