@@ -3,6 +3,7 @@ import { Controller, Post, Get, Body, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { TarotService } from './tarot.service';
 import { CreateReadingDto } from './dto/create-reading.dto';
+import { GenerateNftImageDto } from './dto/generate-nft-image.dto';
 
 @ApiTags('tarot')
 @Controller('tarot')
@@ -148,5 +149,46 @@ export class TarotController {
   })
   async getReadingDetail(@Param('id') id: number) {
     return this.tarotService.getReadingById(id);
+  }
+
+  // 🎨 NFT 이미지 생성 및 Pinata 업로드
+  @Post('nft/generate-image')
+  @ApiOperation({
+    summary: 'NFT 이미지 생성',
+    description: '타로 리딩 결과를 바탕으로 AI 이미지를 생성하고 Pinata에 업로드하여 CID를 반환합니다.',
+  })
+  @ApiBody({ type: GenerateNftImageDto })
+  @ApiResponse({
+    status: 201,
+    description: 'NFT 이미지가 성공적으로 생성되고 Pinata에 업로드되었습니다.',
+    example: {
+      success: true,
+      cid: 'QmXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      imageUrl: 'https://gateway.pinata.cloud/ipfs/QmXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      message: 'NFT 이미지가 성공적으로 생성되었습니다.',
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 데이터',
+  })
+  @ApiResponse({
+    status: 500,
+    description: '서버 내부 오류 (AI 이미지 생성 실패, Pinata 업로드 실패 등)',
+  })
+  async generateNFTImage(@Body() data: GenerateNftImageDto) {
+    try {
+      // 타로 리딩 데이터를 바탕으로 AI 이미지 생성 및 Pinata 업로드
+      const result = await this.tarotService.generateAndUploadNFTImage(data);
+
+      return {
+        success: true,
+        //cid: result.cid,
+        imageUrl: result.imageUrl,
+        message: 'NFT 이미지가 성공적으로 생성되었습니다.',
+      };
+    } catch (error) {
+      throw new Error(`NFT 이미지 생성 실패: ${error.message}`);
+    }
   }
 }

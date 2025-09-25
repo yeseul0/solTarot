@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import OpenAI from 'openai';
 import { DrawnCard } from '../entities/tarot_reading.entity';
+import { GenerateNftImageDto } from '../tarot/dto/generate-nft-image.dto';
 
 @Injectable()
 export class AIInterpretationService {
@@ -233,4 +234,193 @@ export class AIInterpretationService {
       - 3번째 카드: 결과와 조언`;
   }
 
+  // 📝 타로 운명의 그림을 위한 프롬프트 생성
+  private createTarotImagePrompt(data: GenerateNftImageDto): string {
+    const { spreadType, drawnCards, aiInterpretation } = data;
+
+    // AI 해석 파싱
+    let interpretation: any = {};
+    try {
+      interpretation = JSON.parse(aiInterpretation);
+    } catch (error) {
+      console.warn('AI 해석 파싱 실패, 기본값 사용');
+      interpretation = {
+        fullMessage: '신비로운 운명의 메시지가 당신을 기다립니다',
+        cards: [
+          {
+            position: "현재 상황",
+            cardName: "운명의 카드",
+            direction: "정방향",
+            interpretation: "새로운 시작과 가능성을 의미합니다"
+          },
+          {
+            position: "영향 요소",
+            cardName: "신비의 카드",
+            direction: "정방향",
+            interpretation: "숨겨진 기회가 다가오고 있습니다"
+          },
+          {
+            position: "결과와 조언",
+            cardName: "희망의 카드",
+            direction: "정방향",
+            interpretation: "긍정적인 변화가 기다리고 있습니다"
+          }
+        ],
+        conclusion: '새로운 가능성이 열리고 있습니다',
+      };
+    }
+
+    // 카테고리별 매핑 함수
+    const getCategoryFromSpread = (spreadType: string) => {
+      if (['loveFortune', 'crushSomething', 'relationshipCompatibility', 'breakupReunion'].includes(spreadType)) {
+        return 'love';
+      }
+      if (['moneyFortune', 'careerChoice', 'careerGrowth', 'wealthFlow'].includes(spreadType)) {
+        return 'career';
+      }
+      if (['healthFortune', 'energyState', 'lifestyleAdvice', 'mentalStability'].includes(spreadType)) {
+        return 'health';
+      }
+      return 'general'; // todayMonthFortune, overallFlow, opportunityChallenge, lifeTurningPoint
+    };
+
+    // 카테고리별 테마 설정
+    const themeConfig = {
+      love: {
+        theme: '사랑과 관계',
+        colors: 'romantic pink, rose gold, soft red, pearl white',
+        atmosphere: 'romantic and dreamy with hearts and roses floating',
+        energy: 'love energy with cupid arrows and romantic symbols',
+      },
+      career: {
+        theme: '성공과 번영',
+        colors: 'golden yellow, emerald green, rich bronze, royal purple',
+        atmosphere: 'prosperous and ambitious with coins, gems, and achievement symbols',
+        energy: 'success energy with golden light, crowns, and victory laurels',
+      },
+      health: {
+        theme: '건강과 치유',
+        colors: 'healing blue, pure white, gentle green, silver',
+        atmosphere: 'peaceful and healing with nature elements and wellness symbols',
+        energy: 'healing energy with light rays and harmony symbols'
+      },
+      general: {
+        theme: '종합운세',
+        colors: 'cosmic purple, starlight silver, mystical blue, rainbow',
+        atmosphere: 'mystical and all-encompassing with universal symbols',
+        energy: 'universal energy with cosmic elements and sacred geometry'
+      }
+    };
+
+    const category = getCategoryFromSpread(spreadType);
+    const config = themeConfig[category];
+
+    // 메인 프롬프트 생성
+    const prompt = `
+      You are a cute magical rabbit artist! Draw a mystical artwork that represents this tarot reading result in your adorable watercolor illustration style:
+
+      Tarot Reading Context:
+      - Theme: "${config.theme}"
+      - Overall Message: "${interpretation.fullMessage || '운명의 신비로운 메시지'}"
+      
+      - Individual Card Meanings: "
+        ${interpretation.cards ? interpretation.cards.map((card, index) => 
+        `- ${card.position}: ${card.cardName} (${card.direction}) - ${card.interpretation}`
+        ).join('\n  ') : ''}"
+      - Final Advice: "${interpretation.conclusion || '새로운 가능성과 희망'}"
+      - Overall Energy: ${config.energy}
+
+      Main Scene:
+      - atmosphere ${config.atmosphere}
+      
+      Art Style Requirements:
+      - **Cute watercolor illustration style**
+      - Soft, dreamy, kawaii aesthetic
+      - Pastel colors and gentle brush strokes
+      - Whimsical and enchanting atmosphere
+      - Hand-drawn illustration feel
+      - Magical elements with cute charm
+  
+      Create a mystical scene that represents the tarot reading's meaning, but in an adorable, storybook illustration style that matches the magical rabbit artist's aesthetic.
+      
+      Instructions:
+      - Extract key visual elements and symbols from the complete tarot reading above
+      - Create a scene that metaphorically represents the reading's meaning
+      - Incorporate symbolic elements from each card's interpretation
+      - Use mystical and spiritual imagery that matches the reading's energy
+      - Let the individual card meanings influence different parts of the composition
+
+      Visual Style:
+      - Ultra-detailed digital art in the style of premium fantasy illustration
+      - Rich color palette: ${config.colors}
+      - ${config.energy}
+      - Ornate decorative borders with intricate mystical patterns
+      - Sacred geometry and cosmic mandala background
+      - Dramatic lighting with divine rays emanating from the cards
+
+      Mystical Elements:
+      - Floating magical symbols and ancient runes around the cards
+      - Ethereal mist and sparkles of light
+      - Celestial background with stars and nebulae
+      - Golden threads of fate connecting the three cards
+
+      Technical Requirements:
+      - 1024x1024 resolution
+      - High definition, suitable for NFT artwork
+      - Balanced composition with focal point on the three cards
+      - Professional digital art quality with rich details and textures
+
+      The overall feeling should be: Mystical, powerful, beautiful, and filled with the energy of destiny and divine guidance.
+      `.trim();
+
+    return prompt;
+  }
+
+  // 🎨 AI 이미지 생성
+  async generateTarotImage(data: GenerateNftImageDto): Promise<string> {
+    try {
+      console.log('🎨 타로 운명의 그림 생성 시작...');
+      console.log('📊 받은 데이터:', JSON.stringify(data, null, 2));
+
+      // 1. 프롬프트 생성
+      const prompt = this.createTarotImagePrompt(data);
+      console.log('📝 생성된 프롬프트:', prompt);
+
+      // 2. DALL-E 3 API 호출
+      const response = await this.openai.images.generate({
+        model: "dall-e-3",
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+        style: "natural",
+      });
+
+      // 3. 생성된 이미지 URL 확인
+      const imageUrl = response.data[0]?.url;
+
+      if (!imageUrl) {
+        throw new Error('DALL-E에서 이미지 URL을 받지 못했습니다.');
+      }
+
+      console.log('✅ 타로 운명의 그림 생성 완료!');
+      console.log('🖼️ 이미지 URL:', imageUrl);
+
+      return imageUrl;
+    } catch (error) {
+      console.error('❌ 타로 이미지 생성 실패:', error);
+
+      // OpenAI API 에러별 상세 처리
+      if (error.status === 400) {
+        throw new Error(`프롬프트 오류: ${error.message}`);
+      } else if (error.status === 401) {
+        throw new Error('OpenAI API 키가 유효하지 않습니다.');
+      } else if (error.status === 429) {
+        throw new Error('API 사용량 한도 초과. 잠시 후 다시 시도해주세요.');
+      } else if (error.status >= 500) {
+        throw new Error('OpenAI 서버 오류. 잠시 후 다시 시도해주세요.');
+      }
+      throw new Error(`타로 이미지 생성 실패: ${error.message}`);
+    }
+  }
 }
