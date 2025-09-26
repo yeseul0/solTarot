@@ -26,7 +26,10 @@ export class TarotReading {
   aiInterpretation: string; // AI가 생성한 해석
 
   @Column({ nullable: true, length: 100 })
-  imageCid?: string; // Pinata IPFS CID
+  imageCid?: string; // Pinata IPFS CID (이미지)
+
+  @Column({ nullable: true, length: 100 })
+  jsonCid?: string; // Pinata IPFS CID (메타데이터 JSON)
 
   @Column({ nullable: true, length: 100 })
   mintAddress?: string; // NFT 민트 주소 (민팅 후)

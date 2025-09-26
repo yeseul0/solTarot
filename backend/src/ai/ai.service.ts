@@ -46,13 +46,20 @@ export class AIInterpretationService {
               "position": "카드 위치 (예: 현재, 기회, 조심)",
               "cardName": "카드 이름 (예: The Fool, Ace of Cups)",
               "direction": "정방향 또는 역방향",
-              "interpretation": "이 카드의 상세한 해석"
+              "interpretation": "이 카드의 상세한 해석",
+              "keyword": "강렬하고 임팩트있는 2-3글자 핵심키워드 (예: 파괴적변화, 숨겨진진실, 운명적만남)"
             }
           ],
           "conclusion": "조언 및 결론"
         }
 
         따뜻하고 희망적인 톤으로 작성하되, JSON 형식을 엄격히 지켜주세요.
+
+        키워드 작성 가이드:
+        - 2-4글자의 강렬하고 임팩트 있는 단어 사용
+        - 일반적이고 뻔한 단어 피하기 (예: 행복, 사랑, 성공 등)
+        - 카드의 핵심 에너지를 압축한 독특한 표현 사용
+        - 예시: 파괴적각성, 숨겨진진실, 운명적전환, 강렬한직감, 위험한도전
         `;
 
     try {
@@ -224,7 +231,7 @@ export class AIInterpretationService {
         이것은 인생 전환점 메시지를 위한 3장 스프레드입니다:
         - 1번째 카드 (현재 위치): 현재 인생에서 당신이 서 있는 위치
         - 2번째 카드 (전환점 신호): 변화의 신호와 전환점의 징조들
-        - 3번째 카드 (새로운 시작): 새로운 시작을 위한 우주의 메시지와 방향`
+        - 3번째 카드 (새로운 시작): 새로운 시작을 위한 우주의 메시지와 방향`,
     };
 
     return promptMaps[spreadKey] || `
@@ -251,19 +258,22 @@ export class AIInterpretationService {
             position: "현재 상황",
             cardName: "운명의 카드",
             direction: "정방향",
-            interpretation: "새로운 시작과 가능성을 의미합니다"
+            interpretation: "새로운 시작과 가능성을 의미합니다",
+            keyword: "운명적각성"
           },
           {
             position: "영향 요소",
             cardName: "신비의 카드",
             direction: "정방향",
-            interpretation: "숨겨진 기회가 다가오고 있습니다"
+            interpretation: "숨겨진 기회가 다가오고 있습니다",
+            keyword: "비밀스런기회"
           },
           {
             position: "결과와 조언",
             cardName: "희망의 카드",
             direction: "정방향",
-            interpretation: "긍정적인 변화가 기다리고 있습니다"
+            interpretation: "긍정적인 변화가 기다리고 있습니다",
+            keyword: "찬란한전환"
           }
         ],
         conclusion: '새로운 가능성이 열리고 있습니다',
@@ -324,8 +334,8 @@ export class AIInterpretationService {
       - Overall Message: "${interpretation.fullMessage || '운명의 신비로운 메시지'}"
       
       - Individual Card Meanings: "
-        ${interpretation.cards ? interpretation.cards.map((card, index) => 
-        `- ${card.position}: ${card.cardName} (${card.direction}) - ${card.interpretation}`
+        ${interpretation.cards ? interpretation.cards.map((card, index) =>
+        `- ${card.position}: ${card.cardName} (${card.direction}) - ${card.interpretation} [Key: ${card.keyword || 'mystic'}]`
         ).join('\n  ') : ''}"
       - Final Advice: "${interpretation.conclusion || '새로운 가능성과 희망'}"
       - Overall Energy: ${config.energy}
@@ -342,13 +352,20 @@ export class AIInterpretationService {
       - Magical elements with cute charm
   
       Create a mystical scene that represents the tarot reading's meaning, but in an adorable, storybook illustration style that matches the magical rabbit artist's aesthetic.
-      
+
+      🚫 CRITICAL RESTRICTIONS 🚫:
+      - DO NOT draw tarot cards, card shapes, rectangular frames, or playing card layouts
+      - DO NOT show three separate card-like objects
+      - Instead create ONE unified magical landscape/scene that represents the combined meaning
+      - Think of it as a mystical storybook illustration, not a card reading display
+
       Instructions:
-      - Extract key visual elements and symbols from the complete tarot reading above
-      - Create a scene that metaphorically represents the reading's meaning
-      - Incorporate symbolic elements from each card's interpretation
+      - **FOCUS HEAVILY on the [Key: xxx] keywords from each reading position - these are the core essence to visualize**
+      - Create ONE unified mystical scene that represents the complete reading's meaning
+      - Transform each keyword into powerful visual metaphors and symbols within a single composition
+      - Incorporate symbolic elements from the interpretations as part of a cohesive artistic scene
       - Use mystical and spiritual imagery that matches the reading's energy
-      - Let the individual card meanings influence different parts of the composition
+      - DO NOT show individual tarot cards - instead show the abstract concepts and energies they represent
 
       Visual Style:
       - Ultra-detailed digital art in the style of premium fantasy illustration
@@ -356,13 +373,14 @@ export class AIInterpretationService {
       - ${config.energy}
       - Ornate decorative borders with intricate mystical patterns
       - Sacred geometry and cosmic mandala background
-      - Dramatic lighting with divine rays emanating from the cards
+      - Dramatic lighting with divine rays emanating from mystical focal points
 
       Mystical Elements:
-      - Floating magical symbols and ancient runes around the cards
+      - Floating magical symbols and ancient runes throughout the scene
       - Ethereal mist and sparkles of light
       - Celestial background with stars and nebulae
-      - Golden threads of fate connecting the three cards
+      - Golden threads of fate weaving through the composition
+      - Abstract energy patterns representing the three reading positions
 
       Technical Requirements:
       - 1024x1024 resolution

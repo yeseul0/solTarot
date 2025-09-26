@@ -87,6 +87,10 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
+  // NFT 생성 관련 상태
+  const [isGeneratingNFT, setIsGeneratingNFT] = useState<boolean>(false);
+  const [nftGenerated, setNftGenerated] = useState<boolean>(false);
+
   // 카드 애니메이션 단계 관리
   const [showAIBox, setShowAIBox] = useState<boolean>(false);
   const [showAIContent, setShowAIContent] = useState<boolean>(false);
@@ -189,6 +193,62 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
       setApiError(error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // NFT 생성 API 호출 함수
+  const generateNFT = async () => {
+    if (!selectedSpread || !aiInterpretation || selectedCards.length === 0) {
+      alert("NFT 생성에 필요한 데이터가 부족합니다.");
+      return;
+    }
+
+    if (isGeneratingNFT || nftGenerated) {
+      return; // 이미 생성 중이거나 생성 완료된 경우 무시
+    }
+
+    try {
+      setIsGeneratingNFT(true);
+      console.log("🎨 NFT 생성 API 호출 시작");
+
+      // API 요청 데이터 구성
+      const requestData = {
+        spreadType: selectedSpread.key,
+        drawnCards: selectedCards.map(card => ({
+          cardName: card.card.name,
+          position: card.position,
+          isReversed: card.isReversed
+        })),
+        aiInterpretation: aiInterpretation
+      };
+
+      console.log("📦 NFT 생성 요청 데이터:", requestData);
+
+      const response = await fetch("http://localhost:3001/tarot/nft/generate-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`NFT 생성 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log("✅ NFT 생성 응답 성공:", result);
+
+      setNftGenerated(true);
+
+      // 일단 alert로 응답 표시
+      alert(JSON.stringify(result, null, 2));
+
+    } catch (error) {
+      console.error("❌ NFT 생성 오류:", error);
+      alert(`NFT 생성 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
+    } finally {
+      setIsGeneratingNFT(false);
     }
   };
 
@@ -486,15 +546,20 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
       {confirmed && showAIContent && !isLoading && (
         <div style={{...styles.buttonContainer, ...(isMobile ? styles.buttonContainerMobile : {})}}>
           <button
-            style={{...styles.actionBtn, ...styles.nftBtn, ...(isMobile ? styles.btnMobile : {})}}
-            onClick={() => {
-              // NFT 발행 기능 구현 예정
-              console.log("NFT 발행 클릭됨");
-              alert("NFT 발행 기능은 곧 추가될 예정입니다!");
+            style={{
+              ...styles.actionBtn,
+              ...styles.nftBtn,
+              ...(isMobile ? styles.btnMobile : {}),
+              ...(nftGenerated ? styles.nftBtnCompleted : {}),
+              ...(isGeneratingNFT ? styles.nftBtnDisabled : {})
             }}
+            onClick={generateNFT}
+            disabled={isGeneratingNFT || nftGenerated}
           >
-            NFT발행
-            <div style={styles.btnSubtext}>타로 리딩을 봉인하여 운명을 각인 시키세요!</div>
+            {nftGenerated ? "NFT 생성완료" : "NFT발행"}
+            <div style={styles.btnSubtext}>
+              {nftGenerated ? "운명이 성공적으로 각인되었습니다!" : "타로 리딩을 봉인하여 운명을 각인 시키세요!"}
+            </div>
           </button>
           <button
             style={{...styles.actionBtn, ...styles.homeBtn, ...(isMobile ? styles.btnMobile : {})}}
@@ -502,6 +567,83 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
           >
             홈으로 가기
           </button>
+        </div>
+      )}
+
+      {/* NFT 생성 모달 */}
+      {isGeneratingNFT && (
+        <div style={{
+          position: "fixed",
+          top: "0px",
+          left: "0px",
+          right: "0px",
+          bottom: "0px",
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(0, 0, 0, 0.85)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 999999,
+          backdropFilter: "blur(8px)",
+        }}>
+          <div style={{
+            position: "relative",
+            background: "linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 20%, #2d1b69 50%, #1a0a2e 80%, #0f0f1f 100%)",
+            borderRadius: "20px",
+            padding: "40px",
+            textAlign: "center",
+            border: "2px solid rgba(100, 70, 150, 0.6)",
+            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+            backdropFilter: "blur(15px)",
+            maxWidth: "400px",
+            width: "85%",
+            minHeight: "220px",
+            overflow: "hidden",
+          }}>
+            {/* 우주 별빛 효과 */}
+            <div style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 1px, transparent 2px), radial-gradient(circle at 80% 60%, rgba(135,206,235,0.2) 1px, transparent 2px), radial-gradient(circle at 40% 80%, rgba(255,255,255,0.05) 1px, transparent 2px)",
+              pointerEvents: "none",
+              borderRadius: "20px",
+            }} />
+
+            <div style={{ position: "relative", zIndex: 10 }}>
+              <div style={{
+                fontSize: "50px",
+                marginBottom: "20px",
+                display: "inline-block",
+                animation: "spin 2s linear infinite",
+                filter: "drop-shadow(0 0 15px rgba(135, 206, 235, 0.7))",
+              }}>🔮</div>
+
+              <h3 style={{
+                color: "#FFFFFF",
+                fontSize: "28px",
+                fontWeight: "700",
+                margin: "15px 0 10px 0",
+                textShadow: "0 3px 8px rgba(0, 0, 0, 0.8)",
+                letterSpacing: "0.8px",
+              }}>✨ NFT 생성중...</h3>
+
+              <p style={{
+                color: "#E8E3FF",
+                fontSize: "18px",
+                lineHeight: 1.7,
+                margin: "20px 0 0 0",
+                textShadow: "0 2px 6px rgba(0, 0, 0, 0.6)",
+                fontWeight: "500",
+              }}>
+                타로 리딩을 봉인하여<br />
+                운명을 각인시키고 있습니다
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -785,6 +927,78 @@ const cardStyles = {
     borderRadius: 10,
     transition: "transform 0.2s, box-shadow 0.2s",
     zIndex: 1,
+  } as React.CSSProperties,
+
+  // NFT 모달 스타일 (더 확실한 중앙 정렬)
+  modalOverlay: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100vw",
+    height: "100vh",
+    backgroundColor: "rgba(0, 0, 0, 0.8)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 999999,
+    backdropFilter: "blur(5px)",
+  } as React.CSSProperties,
+
+  modalContent: {
+    position: "relative",
+    background: "linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 20%, #2d1b69 50%, #1a0a2e 80%, #0f0f1f 100%)",
+    borderRadius: 20,
+    padding: "30px 40px",
+    textAlign: "center",
+    border: "2px solid rgba(100, 70, 150, 0.5)",
+    boxShadow: "0 20px 50px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+    backdropFilter: "blur(15px)",
+    maxWidth: 400,
+    width: "90%",
+    minHeight: 200,
+    overflow: "hidden",
+  } as React.CSSProperties,
+
+  modalTitle: {
+    color: "#FFFFFF",
+    fontSize: 26,
+    fontWeight: "700",
+    margin: "15px 0 10px 0",
+    textShadow: "0 3px 6px rgba(0, 0, 0, 0.7)",
+    letterSpacing: "0.5px",
+  } as React.CSSProperties,
+
+  modalText: {
+    color: "#E8E3FF",
+    fontSize: 18,
+    lineHeight: 1.6,
+    margin: "15px 0 0 0",
+    textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)",
+    fontWeight: "500",
+  } as React.CSSProperties,
+
+  loadingSpinner: {
+    fontSize: 50,
+    marginBottom: 20,
+    display: "inline-block",
+    animation: "spin 2s linear infinite, glow 2s ease-in-out infinite alternate",
+    filter: "drop-shadow(0 0 10px rgba(135, 206, 235, 0.5))",
+  } as React.CSSProperties,
+
+  // NFT 버튼 상태별 스타일
+  nftBtnDisabled: {
+    background: "linear-gradient(135deg, #666666 0%, #999999 100%)",
+    color: "#CCCCCC",
+    cursor: "not-allowed",
+    opacity: 0.6,
+  } as React.CSSProperties,
+
+  nftBtnCompleted: {
+    background: "linear-gradient(135deg, #4CAF50 0%, #45a049 100%)",
+    color: "#FFFFFF",
+    cursor: "default",
   } as React.CSSProperties,
 };
 

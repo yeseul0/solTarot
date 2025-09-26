@@ -15,6 +15,7 @@ interface CardInterpretation {
   cardName: string;
   direction: string;
   interpretation: string;
+  keyword: string;
 }
 
 interface AIInterpretationData {
@@ -110,8 +111,10 @@ const AIInterpretationBox: React.FC<AIInterpretationBoxProps> = ({
               }}>
                 <div style={styles.cardHeader}>
                   <span style={styles.cardPosition}>{card.position}</span>
-                  <span style={styles.cardName}>{card.cardName}</span>
-                  <span style={styles.cardDirection}>({card.direction})</span>
+                  <span style={styles.cardName}>
+                    {card.cardName} <span style={styles.cardDirection}>({card.direction})</span>
+                    {card.keyword && <span style={styles.cardKeyword}> {card.keyword}</span>}
+                  </span>
                 </div>
                 <p style={styles.cardInterpretationText}>{card.interpretation}</p>
               </div>
@@ -352,6 +355,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: "#B8A3D9",
     fontSize: 13,
     fontStyle: "italic",
+  } as React.CSSProperties,
+
+  cardKeyword: {
+    color: "#FFD700",
+    fontSize: 12,
+    fontWeight: "600",
+    textShadow: "0 1px 2px rgba(0, 0, 0, 0.4)",
+    background: "rgba(255, 215, 0, 0.1)",
+    padding: "1px 4px",
+    borderRadius: 3,
+    marginLeft: 4,
+    whiteSpace: "nowrap",
   } as React.CSSProperties,
 
   cardInterpretationText: {
