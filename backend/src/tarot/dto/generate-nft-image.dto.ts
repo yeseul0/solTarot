@@ -3,6 +3,12 @@ import { DrawnCard } from 'src/entities/tarot_reading.entity';
 
 export class GenerateNftImageDto {
   @ApiProperty({
+    description: '타로 리딩 ID (imageCid, jsonCid 업데이트용)',
+    example: 1,
+  })
+  readingId: number;
+
+  @ApiProperty({
     description: '스프레드 타입',
     example: 'loveFortune',
   })

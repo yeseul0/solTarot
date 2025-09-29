@@ -163,9 +163,11 @@ export class TarotController {
     description: 'NFT 이미지가 성공적으로 생성되고 Pinata에 업로드되었습니다.',
     example: {
       success: true,
-      cid: 'QmXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      imageCid: 'QmXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+      aiInterpretationCid: 'QmYyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
       imageUrl: 'https://gateway.pinata.cloud/ipfs/QmXxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-      message: 'NFT 이미지가 성공적으로 생성되었습니다.',
+      aiInterpretationUrl: 'https://gateway.pinata.cloud/ipfs/QmYyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy',
+      message: 'NFT 이미지와 AI 해석 JSON이 성공적으로 생성되고 데이터베이스에 저장되었습니다.',
     },
   })
   @ApiResponse({
@@ -183,9 +185,12 @@ export class TarotController {
 
       return {
         success: true,
-        //cid: result.cid,
+        imageCid: result.imageCid,
+        aiInterpretationCid: result.aiInterpretationCid,
         imageUrl: result.imageUrl,
-        message: 'NFT 이미지가 성공적으로 생성되었습니다.',
+        aiInterpretationUrl: result.aiInterpretationUrl,
+        updatedReading: result.updatedReading,
+        message: 'NFT 이미지와 AI 해석 JSON이 성공적으로 생성되고 데이터베이스에 저장되었습니다.',
       };
     } catch (error) {
       throw new Error(`NFT 이미지 생성 실패: ${error.message}`);

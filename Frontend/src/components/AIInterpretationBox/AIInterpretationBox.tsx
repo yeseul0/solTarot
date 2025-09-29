@@ -1,5 +1,22 @@
 // AIInterpretationBox.tsx
-import React from "react";
+import React, { useState, useEffect } from "react";
+import magicRabbitImage from "../../assets/images/nfting2.png";
+
+// 신비로운 AI 해석 메시지들
+const mysticalMessages = [
+  "아르카나가 깊은 심연 속 상징을 풀어내고 있습니다… 🔮",
+  "별과 운명의 조각들을 맞추고 있습니다… 🌌",
+  "보이지 않는 흐름을 읽어내는 중입니다… ✨",
+  "운명의 문이 열리기를 기다리고 있습니다… 🌙",
+  "카드 속 상징이 차례로 드러나고 있습니다… 🪄"
+];
+
+// AI 해석 로딩 비디오들
+const aiLoadingVideos = [
+  magicRabbitImage, // 기존 이미지도 유지 (fallback)
+  "/src/assets/videos/nfting1(video).mp4",
+  "/src/assets/videos/nfting2(video).mp4"
+];
 
 interface AIInterpretationBoxProps {
   isLoading: boolean;
@@ -41,6 +58,22 @@ const AIInterpretationBox: React.FC<AIInterpretationBoxProps> = ({
   isMobile,
   onRetry,
 }) => {
+  // 랜덤 메시지와 비디오 선택
+  const [currentMessage, setCurrentMessage] = useState("");
+  const [currentVideo, setCurrentVideo] = useState("");
+
+  useEffect(() => {
+    if (isLoading) {
+      // 랜덤 메시지 선택
+      const randomMessageIndex = Math.floor(Math.random() * mysticalMessages.length);
+      setCurrentMessage(mysticalMessages[randomMessageIndex]);
+
+      // 랜덤 비디오 선택 (첫 번째는 이미지이므로 1, 2번만 선택)
+      const randomVideoIndex = Math.floor(Math.random() * 2) + 1; // 1 또는 2
+      setCurrentVideo(aiLoadingVideos[randomVideoIndex]);
+    }
+  }, [isLoading]);
+
   // AI 해석 데이터 파싱
   const interpretationData = aiInterpretation ? parseAIInterpretation(aiInterpretation) : null;
 
@@ -53,22 +86,46 @@ const AIInterpretationBox: React.FC<AIInterpretationBoxProps> = ({
       animation: "fadeIn 0.3s ease-out forwards"
     }}>
       {isLoading ? (
-        <div style={styles.loadingContainer}>
-          {/* 우주 별빛 효과 */}
-          <div style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "radial-gradient(circle at 20% 20%, rgba(255,255,255,0.1) 1px, transparent 2px), radial-gradient(circle at 80% 60%, rgba(135,206,235,0.2) 1px, transparent 2px), radial-gradient(circle at 50% 80%, rgba(255,255,255,0.05) 1px, transparent 2px)",
-            pointerEvents: "none",
-          }} />
-
-          <div style={{ position: "relative", zIndex: 1 }}>
-            <div style={styles.loadingSpinner}>🔮</div>
-            <p style={styles.loadingText}>AI가 카드를 해석하고 있습니다...</p>
-          </div>
+        <div style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "30px 20px",
+          textAlign: "center",
+          background: "transparent",
+          minHeight: "200px",
+        }}>
+          {/* 귀여운 마법사 토끼 랜덤 비디오 */}
+          <video
+            src={currentVideo}
+            autoPlay
+            loop
+            muted
+            playsInline
+            style={{
+              width: "140px",
+              height: "140px",
+              objectFit: "cover",
+              marginBottom: "20px",
+              borderRadius: "50%",
+              filter: "drop-shadow(0 4px 15px rgba(0, 0, 0, 0.3))",
+              animation: "float 3s ease-in-out infinite",
+            }}
+          />
+          {/* 신비로운 메시지 */}
+          <p style={{
+            color: "#FFFFFF",
+            fontSize: "18px",
+            fontWeight: "500",
+            lineHeight: 1.6,
+            textShadow: "0 2px 8px rgba(0, 0, 0, 0.7)",
+            letterSpacing: "0.3px",
+            margin: 0,
+            maxWidth: "400px",
+          }}>
+            {currentMessage}
+          </p>
         </div>
       ) : apiError ? (
         <div style={styles.errorContainer}>

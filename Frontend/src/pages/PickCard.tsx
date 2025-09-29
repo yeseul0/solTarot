@@ -11,6 +11,20 @@ import {
 } from "../data/tarotData";
 import { useLocation, useNavigate } from "react-router-dom";
 
+// NFT 생성 신비로운 메시지들
+const nftCreationMessages = [
+  "우주의 화가가 당신의 운명을 별자리에 새기고 있습니다…",
+  "우주의 아틀리에에서 영원한 운명이 탄생하고 있습니다",
+  "운명의 실을 금실로 짜고 있습니다…",
+  "별들이 당신의 이야기를 속삭이고 있습니다…"
+];
+
+// NFT 생성 비디오들
+const nftCreationVideos = [
+  "/src/assets/videos/nfting1(video).mp4",
+  "/src/assets/videos/nfting2(video).mp4"
+];
+
 // 백엔드 API 타입 정의 (백엔드 스펙에 맞게 수정)
 interface DrawnCard {
   cardName: string;  // 'the-fool' 형태의 카드 이름
@@ -86,10 +100,13 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
   const [aiInterpretation, setAiInterpretation] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [currentReadingId, setCurrentReadingId] = useState<number | null>(null); // 🔥 현재 리딩 ID 저장
 
   // NFT 생성 관련 상태
   const [isGeneratingNFT, setIsGeneratingNFT] = useState<boolean>(false);
   const [nftGenerated, setNftGenerated] = useState<boolean>(false);
+  const [nftMessage, setNftMessage] = useState<string>("");
+  const [nftVideo, setNftVideo] = useState<string>("");
 
   // 카드 애니메이션 단계 관리
   const [showAIBox, setShowAIBox] = useState<boolean>(false);
@@ -187,6 +204,8 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
       console.log("🎯 백엔드 응답 완료 - 기존 카드 상태 유지하여 UI 안정화");
 
       setAiInterpretation(result.aiInterpretation);
+      setCurrentReadingId(result.id); // 🔥 리딩 ID 저장!
+      console.log("💾 리딩 ID 저장:", result.id);
 
     } catch (error) {
       console.error("❌ API 호출 오류:", error);
@@ -203,16 +222,29 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
       return;
     }
 
+    if (!currentReadingId) {
+      alert("리딩 ID가 없습니다. 타로 해석을 먼저 완료해주세요.");
+      return;
+    }
+
     if (isGeneratingNFT || nftGenerated) {
       return; // 이미 생성 중이거나 생성 완료된 경우 무시
     }
 
     try {
       setIsGeneratingNFT(true);
+
+      // 랜덤 NFT 생성 메시지와 비디오 선택
+      const randomMessageIndex = Math.floor(Math.random() * nftCreationMessages.length);
+      const randomVideoIndex = Math.floor(Math.random() * nftCreationVideos.length);
+      setNftMessage(nftCreationMessages[randomMessageIndex]);
+      setNftVideo(nftCreationVideos[randomVideoIndex]);
+
       console.log("🎨 NFT 생성 API 호출 시작");
 
       // API 요청 데이터 구성
       const requestData = {
+        readingId: currentReadingId, // 🔥 리딩 ID 추가!
         spreadType: selectedSpread.key,
         drawnCards: selectedCards.map(card => ({
           cardName: card.card.name,
@@ -301,18 +333,69 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
     setSelectedIndexes([]);
   };
 
-  // 단계별 카드 선택 함수 - 각 질문마다 한 장씩만 선택
+  // 단계별 카드 선택 함수 - 각 질문마다 한 장씩만 선택하고 자동으로 확정
   const pickCardForQuestion = (idx: number) => {
     if (currentPickedCard === idx) {
       // 이미 선택된 카드를 다시 클릭하면 선택 취소
       setCurrentPickedCard(null);
     } else if (!selectedIndexes.includes(idx)) {
-      // 이미 다른 단계에서 선택된 카드가 아니면 선택
+      // 이미 다른 단계에서 선택된 카드가 아니면 선택하고 자동으로 확정
       setCurrentPickedCard(idx);
+
+      // 카드 선택 후 즉시 확정 처리 (운명이야!)
+      setTimeout(() => {
+        confirmCurrentCardAutomatic(idx);
+      }, 200); // 200ms 후 자동 확정 (선택 애니메이션 후)
     }
   };
 
-  // 현재 질문에 대한 카드 선택 확정 후 다음 단계로
+  // 자동 카드 확정 함수
+  const confirmCurrentCardAutomatic = (cardIndex: number) => {
+    // 🎲 랜덤으로 정/역방향 결정 (50% 확률)
+    const isReversed = Math.random() < 0.5;
+
+    // 선택된 카드 정보 생성
+    const selectedCard = FULL_DECK[cardIndex] || {
+      id: cardIndex + 1,
+      name: getCardNameByIndex(cardIndex),
+      korName: getCardNameByIndex(cardIndex),
+      arcana: 'major' as const,
+      number: cardIndex + 1,
+      image: getCardImagePath(cardIndex),
+      keywords: ['신비', '운명', '선택'],
+      meaning: {
+        upright: '긍정적인 변화와 새로운 시작',
+        reversed: '주의가 필요한 상황, 내면의 성찰'
+      }
+    };
+
+    const newCardInfo: DrawnCardInfo = {
+      card: selectedCard,
+      isReversed: isReversed,
+      position: currentQuestionIndex + 1
+    };
+
+    const newSelectedCards = [...selectedCards, newCardInfo];
+    const newSelectedIndexes = [...selectedIndexes, cardIndex];
+    setSelectedCards(newSelectedCards);
+    setSelectedIndexes(newSelectedIndexes);
+
+    if (currentQuestionIndex < 2) {
+      // 아직 더 선택할 카드가 있으면 다음 질문으로
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+      setCurrentPickedCard(null);
+    } else {
+      // 3장 모두 선택 완료 - 결과 화면으로
+      setPicked(newSelectedCards.map((_, index) => index));  // 기존 picked 상태에 저장 (호환성)
+      setAnimatingOut(true);
+      setTimeout(() => {
+        setConfirmed(true);
+        setAnimatingOut(false);
+      }, 800);
+    }
+  };
+
+  // 현재 질문에 대한 카드 선택 확정 후 다음 단계로 (수동 버튼용 - 사용안함)
   const confirmCurrentCard = () => {
     if (currentPickedCard !== null) {
       // 🎲 랜덤으로 정/역방향 결정 (50% 확률)
@@ -375,6 +458,7 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
     setAiInterpretation("");
     setIsLoading(false);
     setApiError(null);
+    setCurrentReadingId(null); // 🔥 리딩 ID 초기화
     // 애니메이션 상태 초기화
     setShowAIBox(false);
     setShowAIContent(false);
@@ -481,15 +565,6 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
             );
           })}
 
-          {/* 현재 카드 선택 완료 버튼 */}
-          {currentPickedCard !== null && (
-            <button
-              style={{...styles.resetBtn, ...(isMobile ? styles.btnMobile : {})}}
-              onClick={confirmCurrentCard}
-            >
-              {currentQuestionIndex < 2 ? '다음 카드 선택' : '결과 확인'}
-            </button>
-          )}
         </>
       ) : (
         // 결과 화면
@@ -570,7 +645,7 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
         </div>
       )}
 
-      {/* NFT 생성 모달 */}
+      {/* NFT 생성 모달 - 깔끔한 새 디자인 */}
       {isGeneratingNFT && (
         <div style={{
           position: "fixed",
@@ -588,61 +663,52 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
           backdropFilter: "blur(8px)",
         }}>
           <div style={{
-            position: "relative",
-            background: "linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 20%, #2d1b69 50%, #1a0a2e 80%, #0f0f1f 100%)",
-            borderRadius: "20px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
             padding: "40px",
             textAlign: "center",
-            border: "2px solid rgba(100, 70, 150, 0.6)",
-            boxShadow: "0 25px 60px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
-            backdropFilter: "blur(15px)",
+            background: "rgba(255, 255, 255, 0.1)",
+            backdropFilter: "blur(20px)",
+            borderRadius: "20px",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
             maxWidth: "400px",
             width: "85%",
             minHeight: "220px",
-            overflow: "hidden",
           }}>
-            {/* 우주 별빛 효과 */}
-            <div style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.1) 1px, transparent 2px), radial-gradient(circle at 80% 60%, rgba(135,206,235,0.2) 1px, transparent 2px), radial-gradient(circle at 40% 80%, rgba(255,255,255,0.05) 1px, transparent 2px)",
-              pointerEvents: "none",
-              borderRadius: "20px",
-            }} />
-
-            <div style={{ position: "relative", zIndex: 10 }}>
-              <div style={{
-                fontSize: "50px",
+            {/* 마법사 토끼 랜덤 비디오 */}
+            <video
+              src={nftVideo}
+              autoPlay
+              loop
+              muted
+              playsInline
+              style={{
+                width: "140px",
+                height: "140px",
+                objectFit: "cover",
                 marginBottom: "20px",
-                display: "inline-block",
-                animation: "spin 2s linear infinite",
-                filter: "drop-shadow(0 0 15px rgba(135, 206, 235, 0.7))",
-              }}>🔮</div>
+                borderRadius: "50%",
+                filter: "drop-shadow(0 4px 15px rgba(0, 0, 0, 0.3))",
+                animation: "float 3s ease-in-out infinite",
+              }}
+            />
 
-              <h3 style={{
-                color: "#FFFFFF",
-                fontSize: "28px",
-                fontWeight: "700",
-                margin: "15px 0 10px 0",
-                textShadow: "0 3px 8px rgba(0, 0, 0, 0.8)",
-                letterSpacing: "0.8px",
-              }}>✨ NFT 생성중...</h3>
-
-              <p style={{
-                color: "#E8E3FF",
-                fontSize: "18px",
-                lineHeight: 1.7,
-                margin: "20px 0 0 0",
-                textShadow: "0 2px 6px rgba(0, 0, 0, 0.6)",
-                fontWeight: "500",
-              }}>
-                타로 리딩을 봉인하여<br />
-                운명을 각인시키고 있습니다
-              </p>
-            </div>
+            {/* 랜덤 신비 메시지 */}
+            <p style={{
+              color: "#FFFFFF",
+              fontSize: "18px",
+              fontWeight: "500",
+              lineHeight: 1.6,
+              textShadow: "0 2px 8px rgba(0, 0, 0, 0.7)",
+              letterSpacing: "0.3px",
+              margin: 0,
+              maxWidth: "350px",
+            }}>
+              {nftMessage}
+            </p>
           </div>
         </div>
       )}
@@ -929,63 +995,6 @@ const cardStyles = {
     zIndex: 1,
   } as React.CSSProperties,
 
-  // NFT 모달 스타일 (더 확실한 중앙 정렬)
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100vw",
-    height: "100vh",
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 999999,
-    backdropFilter: "blur(5px)",
-  } as React.CSSProperties,
-
-  modalContent: {
-    position: "relative",
-    background: "linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 20%, #2d1b69 50%, #1a0a2e 80%, #0f0f1f 100%)",
-    borderRadius: 20,
-    padding: "30px 40px",
-    textAlign: "center",
-    border: "2px solid rgba(100, 70, 150, 0.5)",
-    boxShadow: "0 20px 50px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
-    backdropFilter: "blur(15px)",
-    maxWidth: 400,
-    width: "90%",
-    minHeight: 200,
-    overflow: "hidden",
-  } as React.CSSProperties,
-
-  modalTitle: {
-    color: "#FFFFFF",
-    fontSize: 26,
-    fontWeight: "700",
-    margin: "15px 0 10px 0",
-    textShadow: "0 3px 6px rgba(0, 0, 0, 0.7)",
-    letterSpacing: "0.5px",
-  } as React.CSSProperties,
-
-  modalText: {
-    color: "#E8E3FF",
-    fontSize: 18,
-    lineHeight: 1.6,
-    margin: "15px 0 0 0",
-    textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)",
-    fontWeight: "500",
-  } as React.CSSProperties,
-
-  loadingSpinner: {
-    fontSize: 50,
-    marginBottom: 20,
-    display: "inline-block",
-    animation: "spin 2s linear infinite, glow 2s ease-in-out infinite alternate",
-    filter: "drop-shadow(0 0 10px rgba(135, 206, 235, 0.5))",
-  } as React.CSSProperties,
 
   // NFT 버튼 상태별 스타일
   nftBtnDisabled: {

@@ -81,13 +81,41 @@ export class AIInterpretationService {
 
       const content = response.choices[0]?.message?.content || '해석을 생성할 수 없습니다.';
 
-      // JSON 파싱 시도
+      // JSON 파싱 시도 with 정제 로직
       try {
-        const parsed = JSON.parse(content);
+        // 1. ```json ``` 블록 제거
+        let cleanContent = content.trim();
+        if (cleanContent.startsWith('```json')) {
+          cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        }
+        if (cleanContent.startsWith('```')) {
+          cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+
+        // 2. JSON 찾기 (중괄호로 시작하는 부분만 추출)
+        const jsonStart = cleanContent.indexOf('{');
+        const jsonEnd = cleanContent.lastIndexOf('}');
+
+        if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+          cleanContent = cleanContent.substring(jsonStart, jsonEnd + 1);
+        }
+
+        console.log('🔧 정제된 AI 응답:', cleanContent);
+
+        const parsed = JSON.parse(cleanContent);
+        console.log('✅ JSON 파싱 성공:', parsed);
         return JSON.stringify(parsed); // 유효한 JSON인지 확인 후 다시 문자열로 반환
       } catch (parseError) {
-        console.error('JSON 파싱 에러:', parseError);
-        return content; // JSON이 아니면 원본 텍스트 반환
+        console.error('❌ JSON 파싱 에러:', parseError);
+        console.error('🔍 원본 content:', content);
+        console.error('🔍 정제 시도 후:', cleanContent);
+
+        // JSON 파싱 실패시 기본 JSON 구조 반환
+        return JSON.stringify({
+          fullMessage: content,
+          cards: [],
+          conclusion: "AI 응답 파싱에 실패했습니다. 다시 시도해주세요."
+        });
       }
     } catch (error) {
       console.error('🚨 OpenAI API 에러:', error);
