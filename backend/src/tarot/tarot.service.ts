@@ -8,7 +8,7 @@ import { AIInterpretationService } from '../ai/ai.service';
 import { GenerateNftImageDto } from './dto/generate-nft-image.dto';
 import { PinataSDK } from 'pinata-web3';
 import { ConfigService } from '@nestjs/config';
-import axios from 'axios';
+import axios, { spread } from 'axios';
 
 @Injectable()
 export class TarotService {
@@ -101,6 +101,41 @@ export class TarotService {
     return this.tarotReadingRepository.save(reading);
   }
 
+  // 🎯 NFT 민팅 완료 처리 (새로 추가!)
+  async updateReadingNftMinting(
+    readingId: number,
+    mintAddress: string,
+    tokenAddress: string,
+    signature: string
+  ): Promise<TarotReading> {
+    console.log('🪙 NFT 민팅 완료 처리 시작:', { readingId, mintAddress, tokenAddress, signature });
+
+    const reading = await this.tarotReadingRepository.findOne({
+      where: { id: readingId },
+    });
+
+    if (!reading) {
+      throw new Error(`리딩 ID ${readingId}를 찾을 수 없습니다.`);
+    }
+
+    // NFT 정보 업데이트
+    reading.mintAddress = mintAddress;
+    reading.tokenAddress = tokenAddress;
+    reading.signature = signature;
+    reading.isMinted = true; // 민팅 완료 표시!
+
+    const updatedReading = await this.tarotReadingRepository.save(reading);
+    console.log('✅ NFT 민팅 정보 DB 업데이트 완료:', {
+      id: updatedReading.id,
+      mintAddress: updatedReading.mintAddress,
+      tokenAddress: updatedReading.tokenAddress,
+      signature: updatedReading.signature,
+      isMinted: updatedReading.isMinted,
+    });
+
+    return updatedReading;
+  }
+
   // 🎨 NFT 이미지 생성 및 AI 해석 JSON 모두 Pinata 업로드
   async generateAndUploadNFTImage(data: GenerateNftImageDto) {
     try {
@@ -108,12 +143,12 @@ export class TarotService {
 
       // 1. AI 이미지 생성
       console.log('1️⃣ AI 이미지 생성 중...');
-      const imageUrl = await this.aiInterpretationService.generateTarotImage(data);
-      console.log('✅ AI 이미지 생성 완료:', imageUrl);
+      const generatedImageUrl = await this.aiInterpretationService.generateTarotImage(data);
+      console.log('✅ AI 이미지 생성 완료:', generatedImageUrl);
 
       // 2. 이미지 다운로드
       console.log('2️⃣ 이미지 다운로드 중...');
-      const imageBuffer = await this.downloadImage(imageUrl);
+      const imageBuffer = await this.downloadImage(generatedImageUrl);
       console.log('✅ 이미지 다운로드 완료:', `${imageBuffer.length} bytes`);
 
       // 3. 이미지 Pinata 업로드
@@ -124,13 +159,13 @@ export class TarotService {
       // 4. 이미지 URL로 NFT 메타데이터 JSON 생성 및 Pinata 업로드
       console.log('4️⃣ NFT 메타데이터 JSON 생성 및 Pinata 업로드 중...');
       const gatewayUrl = this.configService.getOrThrow<string>('GATEWAY_URL');
-      const imageUrl = `${gatewayUrl}/ipfs/${imageCid}`;
+      const imageUrl = `https://${gatewayUrl}/ipfs/${imageCid}`;
       console.log('🖼️ 이미지 URL 생성:', imageUrl);
 
       const aiInterpretationCid = await this.uploadNFTMetadataToPinata(
         data.aiInterpretation,
         data,
-        imageUrl
+        imageUrl,
       );
       console.log('✅ NFT 메타데이터 JSON Pinata 업로드 완료, CID:', aiInterpretationCid);
 
@@ -139,7 +174,7 @@ export class TarotService {
       const updatedReading = await this.updateReadingCids(
         data.readingId,
         imageCid,
-        aiInterpretationCid
+        aiInterpretationCid,
       );
       console.log('✅ 데이터베이스 CID 업데이트 완료:', {
         readingId: updatedReading.id,
@@ -150,8 +185,8 @@ export class TarotService {
       const result = {
         imageCid,
         aiInterpretationCid,
-        imageUrl: `${gatewayUrl}/ipfs/${imageCid}`,
-        aiInterpretationUrl: `${gatewayUrl}/ipfs/${aiInterpretationCid}`,
+        imageUrl: `https://${gatewayUrl}/ipfs/${imageCid}`,
+        aiInterpretationUrl: `https://${gatewayUrl}/ipfs/${aiInterpretationCid}`,
         updatedReading: {
           id: updatedReading.id,
           imageCid: updatedReading.imageCid,
@@ -219,41 +254,76 @@ export class TarotService {
   private async uploadNFTMetadataToPinata(
     interpretation: string,
     cardData: any,
-    imageUrl: string
+    imageUrl: string,
   ): Promise<string> {
     try {
       console.log('📤 Pinata NFT 메타데이터 JSON 업로드 시작...');
       console.log('🖼️ 포함할 이미지 URL:', imageUrl);
 
+      // 🎨 AI 해석 텍스트 파싱 (JSON 문자열을 객체로 변환)
+      let parsedInterpretation;
+      try {
+        parsedInterpretation = JSON.parse(interpretation);
+      } catch (error) {
+        console.warn('⚠️ AI 해석 JSON 파싱 실패, 원본 텍스트 사용:', error);
+        parsedInterpretation = { fullMessage: interpretation, conclusion: '' };
+      }
+
+      // 🌟 시드 카드들 추출 (카드 이름만)
+      const seedCards = cardData.drawnCards.map(card => card.cardName).join(', ');
+
+      // 📅 운명 탄생일 (현재 날짜)
+      const birthDate = new Date().toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+
+      // 🎯 상징 텍스트 (fullMessage + conclusion 조합)
+      const symbolText = parsedInterpretation.conclusion
+        ? `${parsedInterpretation.conclusion}`
+        : interpretation;
+
+      // 🔮 카드별 키워드 추출 (AI 해석에서)
+      let cardKeywords = [];
+      try {
+        if (parsedInterpretation.cards && Array.isArray(parsedInterpretation.cards)) {
+          cardKeywords = parsedInterpretation.cards.map((card, index) => {
+            // 키워드가 있으면 사용, 없으면 기본값
+            return card.keyword || card.keywords || `운명${index + 1}`;
+          });
+        } else {
+          // AI 해석에 카드별 키워드가 없으면 기본 키워드 사용
+          cardKeywords = cardData.drawnCards.map((_, index) => `운명${index + 1}`);
+        }
+      } catch (error) {
+        console.warn('⚠️ 카드 키워드 추출 실패:', error);
+        cardKeywords = cardData.drawnCards.map((_, index) => `운명${index + 1}`);
+      }
+
+      // 📖 Description 구성 (줄바꿈을 \n으로 명시적으로 처리)
+      const description = `${cardKeywords[0] || '운명1'} · ${cardKeywords[1] || '운명2'} · ${cardKeywords[2] || '운명3'}\n\n상징: "${symbolText}"\n\n시드: ${seedCards}\n운명 탄생: ${birthDate}`;
+
       // NFT 메타데이터 표준에 맞는 JSON 구성
       const nftMetadata = {
-        name: `타로 리딩 NFT - ${cardData.spreadType}`,
-        description: interpretation,
+        // name: `타로 리딩 NFT - ${cardData.spreadType}`,
+        name: parsedInterpretation.name
+          ? `${parsedInterpretation.name} - ${cardData.spreadType}`
+          : `Sol Tarot Reading - ${cardData.spreadType}`,
+        symbol: 'FATE',
         image: imageUrl, // 🔥 imageCid로 만든 이미지 URL!
-        attributes: [
-          {
-            trait_type: "Spread Type",
-            value: cardData.spreadType
-          },
-          {
-            trait_type: "Cards Count",
-            value: cardData.drawnCards.length
-          },
-          ...cardData.drawnCards.map((card: any, index: number) => ({
-            trait_type: `Card ${index + 1}`,
-            value: card.isReversed ? `${card.cardName} (Reversed)` : card.cardName
-          })),
-          {
-            trait_type: "Created At",
-            value: new Date().toISOString()
-          }
-        ],
+        description: description,
         // 추가 메타데이터
-        interpretation: interpretation,
-        cards: cardData.drawnCards,
         spreadType: cardData.spreadType,
+        cards: cardData.drawnCards,
+        interpretation: interpretation,
         timestamp: new Date().toISOString(),
-        version: "1.0"
+        version: "1.0",
+        // 컬렉션 정보 추가
+        collection: {
+          name: "FATE",
+          family: "Sol Tarot NFT Collection",
+        },
       };
 
       console.log('🎨 생성된 NFT 메타데이터:', JSON.stringify(nftMetadata, null, 2));

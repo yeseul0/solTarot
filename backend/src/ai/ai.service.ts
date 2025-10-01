@@ -30,8 +30,10 @@ export class AIInterpretationService {
     // 🤖 ChatGPT 프롬프트
     const spreadDescription = this.getSpreadPrompt(spreadKey);
     const prompt = `
-        당신은 전문 타로 리더입니다. 다음 타로 카드 결과를 해석해주세요.
-
+        당신은 전문 타로 리더입니다. 다음 타로 카드 결과를 구체적이고 유기적으로 해석해주세요. 
+        타로를 뽑은 사람이 정말 자기만을 위한 해석이라고 느낄 수 있도록, 따뜻하고 희망적인 톤으로 작성해주세요.
+    
+        스프레드 설명:
         ${spreadDescription}
 
         뽑힌 카드들:
@@ -40,6 +42,7 @@ export class AIInterpretationService {
         각 카드의 position에 맞는 의미로 해석하고, 반드시 다음 JSON 형식으로만 답변해주세요:
 
         {
+          "name" : "해석 결과를 담은 이름 하나.(예: 사랑의 새벽, 운명의 전환점)",
           "fullMessage": "전체적인 메시지",
           "cards": [
             {
@@ -47,7 +50,7 @@ export class AIInterpretationService {
               "cardName": "카드 이름 (예: The Fool, Ace of Cups)",
               "direction": "정방향 또는 역방향",
               "interpretation": "이 카드의 상세한 해석",
-              "keyword": "강렬하고 임팩트있는 2-3글자 핵심키워드 (예: 파괴적변화, 숨겨진진실, 운명적만남)"
+              "keyword": "강렬하고 임팩트있는 2-3글자 핵심키워드 (예: 파괴적 변화, 숨겨진 진실, 운명적 만남)"
             }
           ],
           "conclusion": "조언 및 결론"
@@ -55,11 +58,17 @@ export class AIInterpretationService {
 
         따뜻하고 희망적인 톤으로 작성하되, JSON 형식을 엄격히 지켜주세요.
 
+        해석 이름 작성 가이드 : 
+        - 2-4글자의 강렬하고 임팩트 있는 단어 사용 (띄어쓰기 한번까지만 가능)
+        - 일반적이고 뻔한 단어 피하기 (예: 행복, 사랑, 성공 등)
+        - 카드 3장의 방향, 순서, 스프레드를 모두 고려한 유기적이고 종합적인 해석을 압축한 구체적인 표현 사용
+
+
         키워드 작성 가이드:
-        - 2-4글자의 강렬하고 임팩트 있는 단어 사용
+        - 2-4글자의 강렬하고 임팩트 있는 단어 사용 (띄어쓰기 한번까지만 가능)
         - 일반적이고 뻔한 단어 피하기 (예: 행복, 사랑, 성공 등)
         - 카드의 핵심 에너지를 압축한 독특한 표현 사용
-        - 예시: 파괴적각성, 숨겨진진실, 운명적전환, 강렬한직감, 위험한도전
+        - 예시: 파괴적 각성, 숨겨진 진실, 운명적 전환, 강렬한 직감, 위험한 도전
         `;
 
     try {
@@ -82,9 +91,10 @@ export class AIInterpretationService {
       const content = response.choices[0]?.message?.content || '해석을 생성할 수 없습니다.';
 
       // JSON 파싱 시도 with 정제 로직
+      let cleanContent = ''; // 변수를 try 블록 밖에서 선언
       try {
         // 1. ```json ``` 블록 제거
-        let cleanContent = content.trim();
+        cleanContent = content.trim();
         if (cleanContent.startsWith('```json')) {
           cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '');
         }
@@ -340,14 +350,14 @@ export class AIInterpretationService {
         theme: '건강과 치유',
         colors: 'healing blue, pure white, gentle green, silver',
         atmosphere: 'peaceful and healing with nature elements and wellness symbols',
-        energy: 'healing energy with light rays and harmony symbols'
+        energy: 'healing energy with light rays and harmony symbols',
       },
       general: {
         theme: '종합운세',
         colors: 'cosmic purple, starlight silver, mystical blue, rainbow',
         atmosphere: 'mystical and all-encompassing with universal symbols',
-        energy: 'universal energy with cosmic elements and sacred geometry'
-      }
+        energy: 'universal energy with cosmic elements and sacred geometry',
+      },
     };
 
     const category = getCategoryFromSpread(spreadType);
@@ -359,6 +369,7 @@ export class AIInterpretationService {
 
       Tarot Reading Context:
       - Theme: "${config.theme}"
+      - FATE name : "${interpretation.name || '운명의 여정'}"
       - Overall Message: "${interpretation.fullMessage || '운명의 신비로운 메시지'}"
       
       - Individual Card Meanings: "
@@ -378,9 +389,10 @@ export class AIInterpretationService {
       - Whimsical and enchanting atmosphere
       - Hand-drawn illustration feel
       - Magical elements with cute charm
-  
-      Create a mystical scene that represents the tarot reading's meaning, but in an adorable, storybook illustration style that matches the magical rabbit artist's aesthetic.
 
+      Create a mystical scene that represents the tarot reading's meaning, but in an adorable, storybook illustration style that matches the magical rabbit artist's aesthetic.
+  
+      
       🚫 CRITICAL RESTRICTIONS 🚫:
       - DO NOT draw tarot cards, card shapes, rectangular frames, or playing card layouts
       - DO NOT show three separate card-like objects
@@ -392,16 +404,13 @@ export class AIInterpretationService {
       - Create ONE unified mystical scene that represents the complete reading's meaning
       - Transform each keyword into powerful visual metaphors and symbols within a single composition
       - Incorporate symbolic elements from the interpretations as part of a cohesive artistic scene
-      - Use mystical and spiritual imagery that matches the reading's energy
-      - DO NOT show individual tarot cards - instead show the abstract concepts and energies they represent
-
+      
       Visual Style:
       - Ultra-detailed digital art in the style of premium fantasy illustration
       - Rich color palette: ${config.colors}
       - ${config.energy}
       - Ornate decorative borders with intricate mystical patterns
       - Sacred geometry and cosmic mandala background
-      - Dramatic lighting with divine rays emanating from mystical focal points
 
       Mystical Elements:
       - Floating magical symbols and ancient runes throughout the scene
@@ -413,8 +422,6 @@ export class AIInterpretationService {
       Technical Requirements:
       - 1024x1024 resolution
       - High definition, suitable for NFT artwork
-      - Balanced composition with focal point on the three cards
-      - Professional digital art quality with rich details and textures
 
       The overall feeling should be: Mystical, powerful, beautiful, and filled with the energy of destiny and divine guidance.
       `.trim();

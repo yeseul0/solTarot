@@ -1,5 +1,5 @@
 // tarot/tarot.controller.ts
-import { Controller, Post, Get, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Patch } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { TarotService } from './tarot.service';
 import { CreateReadingDto } from './dto/create-reading.dto';
@@ -194,6 +194,103 @@ export class TarotController {
       };
     } catch (error) {
       throw new Error(`NFT 이미지 생성 실패: ${error.message}`);
+    }
+  }
+
+  // 🪙 NFT 민팅 완료 처리 (새로 추가!)
+  @Patch('reading/:id/nft-minting')
+  @ApiOperation({
+    summary: 'NFT 민팅 완료 처리',
+    description: 'NFT 민팅이 완료된 후 민트 주소, 토큰 주소, 서명 정보를 데이터베이스에 업데이트합니다.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: '타로 리딩 ID',
+    example: 1,
+  })
+  @ApiBody({
+    description: 'NFT 민팅 완료 정보',
+    schema: {
+      type: 'object',
+      properties: {
+        mintAddress: {
+          type: 'string',
+          description: 'NFT 민트 주소',
+          example: '7eDZ3HhU6Gg1hDdVrnS3V98oHN4fWCfGEnum7FxXjoVK',
+        },
+        tokenAddress: {
+          type: 'string',
+          description: 'Associated Token Account 주소',
+          example: 'BQWWFhzBdw2vKKBUX17NHeFbCoFQHfRARpdztPE2YDr',
+        },
+        signature: {
+          type: 'string',
+          description: '트랜잭션 서명',
+          example: 'SenvQQgYRR45KWKkAj6YhffBN578RUYizYzL48pg8mcUn6xRXmHkF2dvnJFFDD5n47CgAaubC5DdD84AqsQp1eP',
+        },
+      },
+      required: ['mintAddress', 'tokenAddress', 'signature'],
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'NFT 민팅 정보가 성공적으로 업데이트되었습니다.',
+    example: {
+      success: true,
+      message: 'NFT 민팅 정보가 성공적으로 업데이트되었습니다.',
+      updatedReading: {
+        id: 1,
+        mintAddress: '7eDZ3HhU6Gg1hDdVrnS3V98oHN4fWCfGEnum7FxXjoVK',
+        tokenAddress: 'BQWWFhzBdw2vKKBUX17NHeFbCoFQHfRARpdztPE2YDr',
+        signature: 'SenvQQgYRR45KWKkAj6YhffBN578RUYizYzL48pg8mcUn6xRXmHkF2dvnJFFDD5n47CgAaubC5DdD84AqsQp1eP',
+        isMinted: true,
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: '잘못된 요청 데이터',
+  })
+  @ApiResponse({
+    status: 404,
+    description: '타로 리딩을 찾을 수 없습니다.',
+  })
+  @ApiResponse({
+    status: 500,
+    description: '서버 내부 오류',
+  })
+  async updateNftMinting(
+    @Param('id') readingId: number,
+    @Body() body: {
+      mintAddress: string;
+      tokenAddress: string;
+      signature: string;
+    }
+  ) {
+    try {
+      const { mintAddress, tokenAddress, signature } = body;
+
+      // NFT 민팅 정보를 데이터베이스에 업데이트
+      const updatedReading = await this.tarotService.updateReadingNftMinting(
+        readingId,
+        mintAddress,
+        tokenAddress,
+        signature,
+      );
+
+      return {
+        success: true,
+        message: 'NFT 민팅 정보가 성공적으로 업데이트되었습니다.',
+        updatedReading: {
+          id: updatedReading.id,
+          mintAddress: updatedReading.mintAddress,
+          tokenAddress: updatedReading.tokenAddress,
+          signature: updatedReading.signature,
+          isMinted: updatedReading.isMinted,
+        },
+      };
+    } catch (error) {
+      throw new Error(`NFT 민팅 정보 업데이트 실패: ${error.message}`);
     }
   }
 }

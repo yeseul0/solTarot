@@ -34,6 +34,12 @@ export class TarotReading {
   @Column({ nullable: true, length: 100 })
   mintAddress?: string; // NFT 민트 주소 (민팅 후)
 
+  @Column({ nullable: true, length: 100 })
+  tokenAddress?: string; // Associated Token Account 주소 (민팅 후)
+
+  @Column({ nullable: true, length: 200 })
+  signature?: string; // 트랜잭션 서명 (민팅 후)
+
   @Column({ type: 'boolean', default: false })
   isMinted: boolean; // NFT로 민팅되었는지 여부
 

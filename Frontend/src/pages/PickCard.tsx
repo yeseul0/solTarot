@@ -11,6 +11,12 @@ import {
 } from "../data/tarotData";
 import { useLocation, useNavigate } from "react-router-dom";
 
+// Solana 관련 imports
+import { Connection } from "@solana/web3.js";
+import { Program, AnchorProvider, Idl } from "@coral-xyz/anchor";
+import { mintTarotNFT, TAROT_PROGRAM_ID } from "../services/nft/mintTarotNFT";
+import contractIdl from "../idl/contract.json";
+
 // NFT 생성 신비로운 메시지들
 const nftCreationMessages = [
   "우주의 화가가 당신의 운명을 별자리에 새기고 있습니다…",
@@ -21,8 +27,9 @@ const nftCreationMessages = [
 
 // NFT 생성 비디오들
 const nftCreationVideos = [
-  "/src/assets/videos/nfting1(video).mp4",
-  "/src/assets/videos/nfting2(video).mp4"
+  "/src/assets/videos/nfting1.mp4",
+  "/src/assets/videos/nfting2.mp4",
+  "/src/assets/videos/nfting3.mp4",
 ];
 
 // 백엔드 API 타입 정의 (백엔드 스펙에 맞게 수정)
@@ -215,6 +222,121 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
     }
   };
 
+  // 백엔드에 NFT 민팅 정보 업데이트 함수
+  const updateNftMintingInfo = async (
+    readingId: number,
+    mintAddress: string,
+    tokenAddress: string,
+    signature: string
+  ) => {
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/tarot/reading/${readingId}/nft-minting`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mintAddress,
+          tokenAddress,
+          signature,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`백엔드 NFT 정보 업데이트 실패: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log("📡 백엔드 NFT 업데이트 응답:", result);
+      return result;
+    } catch (error) {
+      console.error("❌ 백엔드 NFT 정보 업데이트 에러:", error);
+      throw error;
+    }
+  };
+
+  // 🎯 Solana NFT 민팅 함수
+  const mintSolanaNFT = async (backendResult: { aiInterpretationCid: string }) => {
+    try {
+      console.log("🔗 Solana 네트워크에 NFT 민팅 시작...");
+
+      // 1. 지갑 연결 확인
+      if (!(window as any).solana) {
+        throw new Error("Phantom 지갑이 설치되지 않았습니다!");
+      }
+
+      const wallet = (window as any).solana;
+      if (!wallet.isConnected) {
+        console.log("🔐 지갑 연결 시도...");
+        await wallet.connect();
+      }
+
+      console.log("✅ 지갑 연결됨:", wallet.publicKey.toString());
+
+      // 2. Solana 연결 설정
+      const connection = new Connection("https://api.devnet.solana.com", "confirmed");
+      console.log("🌐 Solana Devnet에 연결됨");
+
+      // 3. Anchor 프로그램 설정 (간단한 방식)
+      const provider = new AnchorProvider(
+        connection,
+        wallet as any,
+        { commitment: "confirmed" }
+      );
+      console.log("🛠️ Anchor Provider 설정 완료");
+
+      const program = new Program(contractIdl as Idl, provider);
+      console.log("📝 Anchor 프로그램 준비 완료");
+
+      // 4. NFT 이름 생성
+      const nftName = `타로 리딩 #${Date.now()}`;
+      console.log("🎨 생성할 NFT 이름:", nftName);
+
+      // 5. 백엔드에서 받은 메타데이터 CID 사용
+      const metadataCid = backendResult.aiInterpretationCid;
+
+      console.log("📦 메타데이터 CID:", metadataCid);
+      console.log("🎨 NFT 이름:", nftName);
+
+      // 6. Solana 트랜잭션 실행
+      console.log("🚀 Solana 트랜잭션 실행 중...");
+      const mintResult = await mintTarotNFT(
+        program,
+        wallet,
+        nftName,
+        metadataCid
+      );
+
+      console.log("✅ Solana NFT 민팅 완료!", mintResult);
+
+      // 7. 백엔드에 NFT 민팅 정보 업데이트
+      if (currentReadingId) {
+        try {
+          console.log("📡 백엔드에 NFT 민팅 정보 업데이트 중...");
+          await updateNftMintingInfo(
+            currentReadingId,
+            mintResult.mintAddress,
+            mintResult.tokenAddress,
+            mintResult.signature
+          );
+          console.log("✅ 백엔드 NFT 정보 업데이트 완료!");
+        } catch (error) {
+          console.error("❌ 백엔드 NFT 정보 업데이트 실패:", error);
+          // 백엔드 업데이트 실패해도 민팅은 성공했으므로 계속 진행
+        }
+      } else {
+        console.warn("⚠️ currentReadingId가 없어서 백엔드 업데이트를 건너뜁니다.");
+      }
+
+      // 8. 성공 메시지
+      alert(`🎉 NFT 민팅 성공!\n\n민트 주소: ${mintResult.mintAddress}\n토큰 주소: ${mintResult.tokenAddress}\n트랜잭션: ${mintResult.signature}`);
+
+    } catch (error) {
+      console.error("❌ Solana NFT 민팅 실패:", error);
+      throw new Error(`Solana NFT 민팅 실패: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
+    }
+  };
+
   // NFT 생성 API 호출 함수
   const generateNFT = async () => {
     if (!selectedSpread || !aiInterpretation || selectedCards.length === 0) {
@@ -271,10 +393,10 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
       const result = await response.json();
       console.log("✅ NFT 생성 응답 성공:", result);
 
-      setNftGenerated(true);
+      // 🚀 이제 Solana 트랜잭션 실행!
+      await mintSolanaNFT(result);
 
-      // 일단 alert로 응답 표시
-      alert(JSON.stringify(result, null, 2));
+      setNftGenerated(true);
 
     } catch (error) {
       console.error("❌ NFT 생성 오류:", error);

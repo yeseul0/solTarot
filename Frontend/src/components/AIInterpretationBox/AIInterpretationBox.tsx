@@ -14,8 +14,9 @@ const mysticalMessages = [
 // AI 해석 로딩 비디오들
 const aiLoadingVideos = [
   magicRabbitImage, // 기존 이미지도 유지 (fallback)
-  "/src/assets/videos/nfting1(video).mp4",
-  "/src/assets/videos/nfting2(video).mp4"
+  "/src/assets/videos/interpret1.mp4",
+  "/src/assets/videos/interpret2.mp4",
+  "/src/assets/videos/interpret3.mp4",
 ];
 
 interface AIInterpretationBoxProps {
@@ -97,12 +98,13 @@ const AIInterpretationBox: React.FC<AIInterpretationBoxProps> = ({
           minHeight: "200px",
         }}>
           {/* 귀여운 마법사 토끼 랜덤 비디오 */}
-          <video
-            src={currentVideo}
-            autoPlay
-            loop
-            muted
-            playsInline
+          {currentVideo && (
+            <video
+              src={currentVideo}
+              autoPlay
+              loop
+              muted
+              playsInline
             style={{
               width: "140px",
               height: "140px",
@@ -113,6 +115,7 @@ const AIInterpretationBox: React.FC<AIInterpretationBoxProps> = ({
               animation: "float 3s ease-in-out infinite",
             }}
           />
+          )}
           {/* 신비로운 메시지 */}
           <p style={{
             color: "#FFFFFF",

@@ -14,7 +14,7 @@ async function bootstrap() {
       // 배포시 실제 도메인 추가 예정
     ],
     credentials: true, // 쿠키/인증 정보 포함 허용
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
   // 📚 Swagger API 문서 설정
