@@ -288,8 +288,8 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
       const program = new Program(contractIdl as Idl, provider);
       console.log("📝 Anchor 프로그램 준비 완료");
 
-      // 4. NFT 이름 생성
-      const nftName = `타로 리딩 #${Date.now()}`;
+      // 4. NFT 이름 생성 (스프레드 이름 + 백엔드 PK ID)
+      const nftName = `${selectedSpread.name} #${currentReadingId}`;
       console.log("🎨 생성할 NFT 이름:", nftName);
 
       // 5. 백엔드에서 받은 메타데이터 CID 사용
@@ -620,7 +620,43 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
   };
 
   return (
-    <div style={styles.container}>
+    <>
+      <style>
+        {`
+          @keyframes questionBounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+          }
+
+          .speech-bubble::after {
+            content: '';
+            position: absolute;
+            right: -12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid rgba(255, 255, 255, 0.95);
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+          }
+
+          .speech-bubble::before {
+            content: '';
+            position: absolute;
+            right: -14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid rgba(139, 115, 85, 0.3);
+            border-top: 12px solid transparent;
+            border-bottom: 12px solid transparent;
+            z-index: -1;
+          }
+        `}
+      </style>
+      <div style={styles.container}>
       {/* 스프레드 선택 화면 - Welcome 페이지 디자인과 통일 */}
       {!selectedSpread ? (
         <div style={styles.spreadSelectionContainer}>
@@ -650,13 +686,20 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
         // 단계별 카드 선택 화면
         <>
           <div style={{...styles.questionContainer, ...(isMobile ? styles.questionContainerMobile : {})}}>
-            <div style={styles.questionBox}>
-              <div style={styles.questionTitle}>
-                {`${currentQuestionIndex + 1}번째 질문`}
+            <div style={styles.speechBubbleContainer}>
+              <div className="speech-bubble" style={styles.speechBubble}>
+                <div style={styles.questionTitle}>
+                  {`${currentQuestionIndex + 1}번째 질문`}
+                </div>
+                <div style={styles.questionText}>
+                  {selectedSpread.questions[currentQuestionIndex]}
+                </div>
               </div>
-              <div style={styles.questionText}>
-                {selectedSpread.questions[currentQuestionIndex]}
-              </div>
+              <img
+                src="/src/assets/images/question.png"
+                alt="question rabbit"
+                style={styles.rabbitIcon}
+              />
             </div>
           </div>
 
@@ -834,7 +877,8 @@ const PickCard: React.FC<PickCardProps> = ({ wallet }) => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 
@@ -845,7 +889,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     left: 0,
     width: "100vw",
     height: "100vh",
-    background: "linear-gradient(135deg, #800000 0%, #b22222 100%)",
+    background: "#8B7355",
     backgroundSize: "cover",
     backgroundPosition: "center",
     overflow: "hidden",
@@ -920,30 +964,43 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: "95%",
     maxWidth: 350,
   },
-  questionBox: {
-    background: "rgba(255, 255, 255, 0.15)",
-    backdropFilter: "blur(15px)",
-    WebkitBackdropFilter: "blur(15px)",
-    border: "1px solid rgba(255, 255, 255, 0.2)",
-    borderRadius: 15,
-    padding: window.innerWidth <= 768 ? "15px 20px" : "18px 25px",
+  speechBubbleContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: window.innerWidth <= 768 ? "20px" : "30px",
+    justifyContent: "center",
+    width: "100%",
+  },
+  speechBubble: {
+    position: "relative",
+    background: "rgba(255, 255, 255, 0.95)",
+    border: "2px solid rgba(139, 115, 85, 0.3)",
+    borderRadius: 20,
+    padding: window.innerWidth <= 768 ? "20px 30px" : "25px 45px",
     textAlign: "center",
-    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.2)",
+    boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
+    minWidth: window.innerWidth <= 768 ? "400px" : "600px",
+    maxWidth: window.innerWidth <= 768 ? "450px" : "700px",
   },
   questionTitle: {
-    color: "#FFFFFF",
+    color: "#8B7355",
     fontSize: window.innerWidth <= 768 ? 14 : 16,
     fontWeight: "600",
     marginBottom: 8,
-    opacity: 0.9,
     letterSpacing: "0.5px",
   },
   questionText: {
-    color: "#FFFFFF",
+    color: "#5D4E37",
     fontSize: window.innerWidth <= 768 ? 16 : 20,
     fontWeight: "500",
     lineHeight: 1.3,
-    textShadow: "0 1px 3px rgba(0, 0, 0, 0.3)",
+  },
+  rabbitIcon: {
+    width: window.innerWidth <= 768 ? "60px" : "80px",
+    height: window.innerWidth <= 768 ? "60px" : "80px",
+    flexShrink: 0,
+    filter: "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))",
+    animation: "questionBounce 2s ease-in-out infinite",
   },
   confirmBtn: {
     position: "absolute",
@@ -1062,8 +1119,8 @@ const cardStyles = {
     border: "none",
     borderRadius: isMobile ? 8 : 10,
     boxShadow: hovered
-      ? "0 8px 32px #b22222"
-      : "2px 4px 10px rgb(81, 9, 9)",
+      ? "0 8px 32px rgba(0, 0, 0, 0.4)"
+      : "2px 4px 10px rgba(0, 0, 0, 0.3)",
     transform: `rotate(${angle}deg) translateY(${yOffset}px)`,
     transition: "transform 0.2s, box-shadow 0.2s",
     cursor: "pointer",
@@ -1080,7 +1137,7 @@ const cardStyles = {
     background: "#000",
     border: "none",
     borderRadius: isMobile ? 8 : 10,
-    boxShadow: "0 8px 32px #b22222",
+    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.5)",
     transform: `rotate(${angle}deg) translateY(${isMobile ? yOffset + 40 : -80}px) scale(1.15)`,
     transition: "transform 0.2s, box-shadow 0.2s",
     cursor: "default",
